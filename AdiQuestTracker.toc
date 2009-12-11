@@ -13,5 +13,4 @@ AdiQuestTracker.lua
 
 modules\AutoHide.lua
 modules\ZoneTracking.lua
-modules\PersistentTracking.lua
 
