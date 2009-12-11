@@ -18,10 +18,36 @@ local DEFAULTS = {
 }
 
 function mod:OnInitialize()
-	mod.db = core.db:RegisterNameSpace("AutoHide", DEFAULTS)
+	mod.db = core.db:RegisterNamespace("AutoHide", DEFAULTS)
 end
 
+function mod:GetOptionsTable()
+	return {
+		name = 'Automatically hide the tracker...',
+		type = 'multiselect',
+		get = function(info, key) return self.db.profile[key]	end,
+		set = function(info, key, value)
+			self.db.profile[key] = value
+			self:CheckVisibility('ConfigChanged')
+		end,
+		values = {
+			empty = 'When empty',
+			combat = 'In combat',
+			arena = 'In arenas',
+			battleground = 'In battlegrounds',
+			raid = 'In raid groups',
+		},
+	}
+end
+
+local function IsWatchFrameEmpty()
+	return not (WATCHFRAME_LINKBUTTONS[1] and WATCHFRAME_LINKBUTTONS[1]:IsShown())
+end
+
+local isEmpty
+
 function mod:OnEnable()
+	isEmpty = IsWatchFrameEmpty()
 	self:RegisterEvent('PLAYER_REGEN_DISABLED', "CheckVisibility")
 	self:RegisterEvent('PLAYER_REGEN_ENABLED', "CheckVisibility")
 	self:RegisterEvent('PLAYER_ENTERING_WORLD', "CheckVisibility")
@@ -34,32 +60,32 @@ end
 
 function mod:OnDisable()
 	WatchFrame:Show()
-	WatchFrameLines:Show()
-end
-
-local function IsWatchFrameEmpty()
-	return not (WATCHFRAME_LINKBUTTONS[1] and WATCHFRAME_LINKBUTTONS[1]:IsShown())
 end
 
 function mod:CheckVisibility(event)
-	self:Debug("CheckVisibility", event, IncombatLockdown())
-	if IncombatLockdown() then return end
+	if InCombatLockdown() then return end
 	local _, instanceType = IsInInstance()
-	if 
-			(self.db.profile.empty and IsWatchFrameEmpty())
+	if
+			(self.db.profile.empty and isEmpty)
 			or (self.db.profile.combat and event == 'PLAYER_REGEN_DISABLED') 
 			or (self.db.profile.arena and instanceType == 'arena')
 			or (self.db.profile.battleground and instanceType == 'pvp')
 			or (self.db.profile.raid and GetRealNumRaidMembers() > 0)
 	then
-		WatchFrame:Hide()
-		WatchFrameLines:Hide()
-	else
+		if WatchFrame:IsShown() then
+			self:Debug('Hiding the watchframe')
+			WatchFrame:Hide()
+		end
+	elseif not WatchFrame:IsShown() then
+		self:Debug('Showing the watchframe')
 		WatchFrame:Show()
-		WatchFrameLines:Show()
 	end
 end
 
 function mod:WatchFrame_Update()
-	return self:CheckVisibility("WatchFrame_Update")
+	local newEmpty = IsWatchFrameEmpty()
+	if newEmpty ~= isEmpty then
+		isEmpty = newEmpty
+		return self:CheckVisibility("WatchFrame_Update")
+	end
 end
