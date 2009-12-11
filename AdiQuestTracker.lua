@@ -28,7 +28,7 @@ function addon:OnEnable()
 	-- Update module enabled states
 	for name, module in self:IterateModules() do
 		module:SetEnabledState(self.db.profile.modules[name])
-	end	
+	end
 end
 
 function addon:Reboot()
@@ -40,10 +40,10 @@ end
 local options
 function addon.GetOptionsTable()
 	if options then return options end
-	
+
 	local profileOptions = LibStub('AceDBOptions-3.0'):GetOptionsTable(addon.db)
 	profileOptions.order = -1
-	
+
 	options = {
 		name = GetAddOnMetadata(addonName, "Title"),
 		type = 'group',
@@ -52,26 +52,26 @@ function addon.GetOptionsTable()
 			general = {
 				name = 'General',
 				type = 'group',
-				args = {					
+				args = {
 					modules = {
 						name = 'Modules',
 						type = 'multiselect',
 						values = {},
 						get = function(info, key) return addon.db.profile.modules[key] end,
-						set = function(info, key, value) 
+						set = function(info, key, value)
 							addon.db.profile.modules[key]  = value
-							if value then addon:EnableModule(key) else addon:DisableModule(key) end 
+							if value then addon:EnableModule(key) else addon:DisableModule(key) end
 						end,
 						order = 0,
 					},
 				},
 				plugins = {},
-			},			
+			},
 			profiles = profileOptions
 		},
 		plugins = {},
 	}
-	
+
 	for name, module in addon:IterateModules() do
 		local mod = module
 		options.args.general.args.modules.values[name] = name
@@ -85,7 +85,7 @@ function addon.GetOptionsTable()
 			end
 		end
 	end
-	
+
 	return options
 end
 
@@ -103,7 +103,37 @@ end
 
 -- Module methods
 addon:SetDefaultModulePrototype({
+	core = addon,
 	Debug = addon.Debug,
 	HasDebug = addon.HasDebug,
 	GetOptionsTable = function() end,
 })
+-- Expand/restore questlog headers
+local expandLock = 0
+local wasCollapsed = {}
+
+function addon:ExpandQuestLog()
+	expandLock = expandLock + 1
+	for index = 1, GetNumQuestLogEntries() do
+		local title, _, _, _, isHeader, isCollapsed = GetQuestLogTitle(index)
+		if isHeader and isCollapsed then
+			wasCollapsed[title] = true
+			ExpandQuestHeader(index)
+		end
+	end
+end
+
+function addon:RestoreQuestLog()
+	if expandLock > 0 then
+		expandLock = expandLock - 1
+		return
+	end
+	for index = 1, GetNumQuestLogEntries() do
+		local title, _, _, _, isHeader = GetQuestLogTitle(index)
+		if isHeader and wasCollapsed[title] then
+			CollapseQuestHeader(index)
+			wasCollapsed[title] = nil
+		end
+	end
+end
+
