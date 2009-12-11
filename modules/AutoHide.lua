@@ -52,6 +52,7 @@ function mod:OnEnable()
 	self:RegisterEvent('PLAYER_REGEN_ENABLED', "CheckVisibility")
 	self:RegisterEvent('PLAYER_ENTERING_WORLD', "CheckVisibility")
 	self:RegisterEvent('PARTY_MEMBERS_CHANGED', "CheckVisibility")
+	self:RegisterEvent('QUEST_LOG_UPDATE', "CheckVisibility")	
 	self:SecureHook("WatchFrame_Update")
 	if IsLoggedIn() then
 		self:CheckVisibility("OnEnable")
