@@ -13,58 +13,38 @@ function mod:OnEnable()
 	self:RegisterEvent("ZONE_CHANGED", "CheckZoneChange")
 	self:RegisterEvent("ZONE_CHANGED_INDOORS", "CheckZoneChange")
 	self:RegisterEvent("ZONE_CHANGED_NEW_AREA", "CheckZoneChange")
+	if IsLoggedIn() then
+		self:CheckZoneChange("OnEnable")
+	end
 end
 
-function mod:CheckZoneChange()
-	local newZone = GetRealZoneText()
+function mod:CheckZoneChange(event)
+	local newZone = GetCurrentMapAreaID() - 1
+	self:Debug("CheckZoneChange, event=", event, "old=", self.currentZone, "new=", newZone)
 	if newZone ~= self.currentZone then
 		self:ZoneChanged(self.currentZone, newZone)
 		self.currentZone = newZone
 	end
 end
 
-local wasCollapsed = {}
 function mod:ZoneChanged(oldZone, newZone)
 	self:Debug("ZoneChanged", oldZone, newZone)
-	
-	-- Expand zone headers
-	local expandedNew, expandedOld
-	for index = 1, GetNumQuestLogEntries() do
-		local title, _, _, _, isHeader, isCollapsed = GetQuestLogTitle(index)
-		if isHeader and isCollapsed then
-			if title == newZone or title == oldZone then
-				wasCollapsed[title] = true
-				ExpandQuestHeader(index)
-			end
-		end
-	end
 
-	-- Change tracked quests
-	local currentHeader = nil
+	self.core:ExpandQuestLog()
+
 	for index = 1, GetNumQuestLogEntries() do
-		local title, _, _, _, isHeader = GetQuestLogTitle(index)
-		if isHeader then
-			if title == oldZone or title == newZone then
-				currentHeader = title
-			else
-				currentHeader = nil
-			end
-		elseif currentHeader then
-			if currentHeader == oldZone and IsQuestWatched(index) then
+		local	title, _, _, _, isHeader, _, _, _, questID = GetQuestLogTitle(index)
+		if not isHeader and questID then
+			local mapID = GetQuestWorldMapAreaID(questID)
+			self:Debug("quest=", title, "id=", questID, "mapID=", mapID, "isWatched=", IsQuestWatched(index))
+			if mapID == oldZone and IsQuestWatched(index) then
 				RemoveQuestWatch(index)
-			elseif currentHeader == newZone and not IsQuestWatched(index) then
+			elseif mapID == newZone and not IsQuestWatched(index) then
 				AddQuestWatch(index)
 			end
 		end
 	end
-		
-	-- Restore header status
-	for index = 1, GetNumQuestLogEntries() do
-		local title, _, _, _, isHeader = GetQuestLogTitle(index)
-		if isHeader and wasCollapsed[title] then
-			CollapseQuestHeader(index)
-			toCollapse[title] = nil
-		end
-	end
-	
+
+	self.core:RestoreQuestLog()
+
 end
