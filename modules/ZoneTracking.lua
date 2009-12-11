@@ -29,7 +29,7 @@ function mod:ZoneChanged(oldZone, newZone)
 	-- Expand zone headers
 	local expandedNew, expandedOld
 	for index = 1, GetNumQuestLogEntries() do
-		local title, _, _, _, isHeader, isCollapsed = GetQuestLogTitle(questIndex)
+		local title, _, _, _, isHeader, isCollapsed = GetQuestLogTitle(index)
 		if isHeader and isCollapsed then
 			if newZone and title == newZone then
 				expandedNew = true
@@ -56,7 +56,7 @@ function mod:ZoneChanged(oldZone, newZone)
 		
 	-- Restore header status
 	for index = 1, GetNumQuestLogEntries() do
-		local title, _, _, _, isHeader = GetQuestLogTitle(questIndex)
+		local title, _, _, _, isHeader = GetQuestLogTitle(index)
 		if isHeader and ((expandedNew and title == newZone) or (expandedOld and title == oldZone)) then
 			CollapseQuestHeader(index)
 		end
