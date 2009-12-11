@@ -27,7 +27,7 @@ end
 function addon:OnEnable()
 	-- Update module enabled states
 	for name, module in self:IterateModules() do
-		module:SetEnabledState(self.db.profile.module[name])
+		module:SetEnabledState(self.db.profile.modules[name])
 	end	
 end
 
@@ -41,7 +41,7 @@ local options
 function addon.GetOptionsTable()
 	if options then return options end
 	
-	local profileOptions = LibStub('AceDBOptions-3.0'):GetOptionsTable(self.db)
+	local profileOptions = LibStub('AceDBOptions-3.0'):GetOptionsTable(addon.db)
 	profileOptions.order = -1
 	
 	options = {
@@ -49,24 +49,41 @@ function addon.GetOptionsTable()
 		type = 'group',
 		childGroups = 'tab',
 		args = {
-			modules = {
-				name = 'Modules',
-				type = 'multiselect',
-				values = {},
-				get = function(info, key) return addon:GetModule(key):IsEnabled() end,
-				set = function(info, key, value) if value then addon:EnableModule(key) else addon:DisableModule(key) end end,
-				order = 0,
-			},
+			general = {
+				name = 'General',
+				type = 'group',
+				args = {					
+					modules = {
+						name = 'Modules',
+						type = 'multiselect',
+						values = {},
+						get = function(info, key) return addon.db.profile.modules[key] end,
+						set = function(info, key, value) 
+							addon.db.profile.modules[key]  = value
+							if value then addon:EnableModule(key) else addon:DisableModule(key) end 
+						end,
+						order = 0,
+					},
+				},
+				plugins = {},
+			},			
 			profiles = profileOptions
 		},
+		plugins = {},
 	}
 	
 	for name, module in addon:IterateModules() do
 		local mod = module
-		options.args.modules.values[name] = name
+		options.args.general.args.modules.values[name] = name
 		local modOptions = mod:GetOptionsTable()
-		modOptions.hidden = function() return not mod:IsEnabled() end
-		options.plugins[name] = modOptions
+		if modOptions then
+			modOptions.hidden = function() return not mod:IsEnabled() end
+			if modOptions.type == 'group' then
+				options.plugins[name] = { [name] = modOptions	}
+			else
+				options.args.general.plugins[name] = { [name] = modOptions	}
+			end
+		end
 	end
 	
 	return options
