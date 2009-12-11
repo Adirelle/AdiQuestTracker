@@ -14,7 +14,7 @@ function mod:OnInitialize()
 end
 
 function mod:OnEnable()
-	self:RegisterEvent('PLAYER_LOGOUT', 'SaveTrackerStatus)	
+	self:RegisterEvent('PLAYER_LOGOUT', 'SaveTrackerStatus')
 	if IsLoggedIn() then
 		self:RestoreTrackerStatus("OnEnable")
 	else
@@ -30,24 +30,25 @@ function mod:RestoreTrackerStatus(event)
 	self.core:ExpandQuestLog()
 	self:Debug("RestoreTrackerStatus", event)
 	for index = 1, GetNumQuestLogEntries() do
-		local	title, _, _, _, isHeader, _, _, _, questID = GetQuestLogTitle(questIndex)
-		if not self.db.char[questID] then
+		local	title, _, _, _, isHeader, _, _, _, questID = GetQuestLogTitle(index)
+		if not isHeader and questID and self.db.char[questID] then
 			self:Debug("Tracking:", title)
 			AddQuestWatch(index)
 		end
 	end
 	self.core:RestoreQuestLog()
-	wipe(self.db.char)	
+	wipe(self.db.char)
 end
 
 function mod:SaveTrackerStatus(event)
 	self:Debug("SaveTrackerStatus", event)
 	self.core:ExpandQuestLog()
 	for index = 1, GetNumQuestLogEntries() do
-		local	_, _, _, _, isHeader, _, _, _, questID = GetQuestLogTitle(questIndex)
-		if not isHeader then
+		local	_, _, _, _, isHeader, _, _, _, questID = GetQuestLogTitle(index)
+		if not isHeader and IsQuestWatched(index) and questID then
 			self.db.char[questID] = true
 		end
 	end
 	self.core:RestoreQuestLog()
 end
+
