@@ -6,6 +6,7 @@ All rights reserverd.
 
 local _, core = ...
 local mod = core:NewModule('ZoneTracking', 'AceEvent-3.0')
+local L = core.L
 
 function mod:OnEnable()
 	self.currentZone = nil

@@ -13,4 +13,5 @@ AdiQuestTracker.lua
 
 modules\AutoHide.lua
 modules\ZoneTracking.lua
+modules\TitleTags.lua
 

@@ -6,6 +6,7 @@ All rights reserverd.
 
 local addonName, addon = ...
 addon = LibStub('AceAddon-3.0'):NewAddon(addon, addonName)
+local L = addon.L
 
 local DEFAULTS = {
 	profile = {
@@ -50,11 +51,11 @@ function addon.GetOptionsTable()
 		childGroups = 'tab',
 		args = {
 			general = {
-				name = 'General',
+				name = L['General'],
 				type = 'group',
 				args = {
 					modules = {
-						name = 'Modules',
+						name = L['Modules'],
 						type = 'multiselect',
 						values = {},
 						get = function(info, key) return addon.db.profile.modules[key] end,
@@ -74,7 +75,7 @@ function addon.GetOptionsTable()
 
 	for name, module in addon:IterateModules() do
 		local mod = module
-		options.args.general.args.modules.values[name] = name
+		options.args.general.args.modules.values[name] = mod.title or name
 		local modOptions = mod:GetOptionsTable()
 		if modOptions then
 			modOptions.hidden = function() return not mod:IsEnabled() end

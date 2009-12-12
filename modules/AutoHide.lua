@@ -6,6 +6,7 @@ All rights reserverd.
 
 local _, core = ...
 local mod = core:NewModule('AutoHide', 'AceEvent-3.0', 'AceHook-3.0')
+local L = core.L
 
 local DEFAULTS = {
 	profile = {
@@ -23,7 +24,7 @@ end
 
 function mod:GetOptionsTable()
 	return {
-		name = 'Automatically hide the tracker...',
+		name = L['Automatically hide the tracker...'],
 		type = 'multiselect',
 		get = function(info, key) return self.db.profile[key]	end,
 		set = function(info, key, value)
@@ -31,11 +32,11 @@ function mod:GetOptionsTable()
 			self:CheckVisibility('ConfigChanged')
 		end,
 		values = {
-			empty = 'When empty',
-			combat = 'In combat',
-			arena = 'In arenas',
-			battleground = 'In battlegrounds',
-			raid = 'In raid groups',
+			empty = L['When empty'],
+			combat = L['In combat'],
+			arena = L['In arenas'],
+			battleground = L['In battlegrounds'],
+			raid = L['In raid groups'],
 		},
 	}
 end
