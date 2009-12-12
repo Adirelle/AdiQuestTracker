@@ -8,14 +8,15 @@ local _, core = ...
 local mod = core:NewModule('TitleTags', 'AceHook-3.0')
 local L = core.L
 
+mod.title = L["Add level and tags to quest titles"]
+
 local tags = {
-	Dungeon = "D",
-	Elite = "+",
-	Group = "G",
-  Heroic = "H",
-  PVP = "P",
-  Raid = "R",
-  Daily = "Y",
+	[L["Dungeon"]] = "D",
+	[L["Elite"]] = "+",
+	[L["Group"]] = "G",
+	[L["Heroic"]] = "H",
+	[L["PVP"]] = "P",
+	[L["Raid"]] = "R",
 }
 
 function mod:OnEnable()
@@ -28,7 +29,7 @@ end
 
 local function TagTitle(title, level, questTag, suggestedGroup, isHeader, isCollapsed, isComplete, isDaily, ...)
 	if not isHeader then
-		title = string.format("[%d%s%s] %s", level, questTag and tags[questTag] or "", isDaily and tags.Daily or "", title)		
+		title = string.format("[%d%s%s] %s", level, questTag and tags[questTag] or "", isDaily and "D" or "", title)		
 	end
 	return title, level, questTag, suggestedGroup, isHeader, isCollapsed, isComplete, isDaily, ...
 end

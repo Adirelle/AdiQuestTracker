@@ -8,6 +8,8 @@ local _, core = ...
 local mod = core:NewModule('ZoneTracking', 'AceEvent-3.0')
 local L = core.L
 
+mod.title = L["Update watched quests on zoning"]
+
 function mod:OnEnable()
 	self.currentZone = nil
 	self:RegisterEvent("PLAYER_ENTERING_WORLD", "CheckZoneChange")
