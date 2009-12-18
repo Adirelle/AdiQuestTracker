@@ -37,14 +37,21 @@ L['Modules'] = true
 L["The tracker is hidden when at least one condition is true."] = true
 L["Update watched quests on zoning"] = true
 L['When empty'] = true
-
--- Quest tags
 L["Dungeon"] = true
 L["Elite"] = true
 L["Group"] = true
 L["Heroic"] = true
 L["PVP"] = true
 L["Raid"] = true
+
+-- Tags
+L["DungeonTag"] = "D"
+L["EliteTag"] = "+"
+L["GroupTag"] = "G"
+L["HeroicTag"] = "H"
+L["PVPTag"] = "P"
+L["RaidTag"] = "R"
+L["DailyTag"] = "Y"
 
 if GetLocale() == "frFR" then
 -- frFR
@@ -54,4 +61,5 @@ L["Group"] = "Groupe"
 L["Heroic"] = "Héroïque"
 L["PVP"] = "JcJ"
 L["Raid"] = "Raid"
+L["DailyTag"] = "J"
 end

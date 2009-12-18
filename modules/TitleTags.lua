@@ -10,14 +10,10 @@ local L = core.L
 
 mod.title = L["Add level and tags to quest titles"]
 
-local tags = {
-	[L["Dungeon"]] = "D",
-	[L["Elite"]] = "+",
-	[L["Group"]] = "G",
-	[L["Heroic"]] = "H",
-	[L["PVP"]] = "P",
-	[L["Raid"]] = "R",
-}
+local tags = {}
+for _, tag in pairs({"Dungeon", "Elite", "Group", "Heroic", "PVP", "Raid"}) do
+	tags[L[tag]] = L[tag..'Tag']
+end
 
 function mod:OnEnable()
 	self:RawHook('GetQuestLogTitle', 'GetQuestLogTitle', true)
@@ -29,7 +25,7 @@ end
 
 local function TagTitle(title, level, questTag, suggestedGroup, isHeader, isCollapsed, isComplete, isDaily, ...)
 	if not isHeader then
-		title = string.format("[%d%s%s] %s", level, questTag and tags[questTag] or "", isDaily and "D" or "", title)		
+		title = string.format("[%d%s%s] %s", level, questTag and tags[questTag] or "", isDaily and L['DailyTag'] or "", title)		
 	end
 	return title, level, questTag, suggestedGroup, isHeader, isCollapsed, isComplete, isDaily, ...
 end
