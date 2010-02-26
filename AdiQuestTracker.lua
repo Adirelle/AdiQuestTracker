@@ -109,32 +109,4 @@ addon:SetDefaultModulePrototype({
 	HasDebug = addon.HasDebug,
 	GetOptionsTable = function() end,
 })
--- Expand/restore questlog headers
-local expandLock = 0
-local wasCollapsed = {}
-
-function addon:ExpandQuestLog()
-	expandLock = expandLock + 1
-	for index = 1, GetNumQuestLogEntries() do
-		local title, _, _, _, isHeader, isCollapsed = GetQuestLogTitle(index)
-		if isHeader and isCollapsed then
-			wasCollapsed[title] = true
-			ExpandQuestHeader(index)
-		end
-	end
-end
-
-function addon:RestoreQuestLog()
-	if expandLock > 0 then
-		expandLock = expandLock - 1
-		return
-	end
-	for index = 1, GetNumQuestLogEntries() do
-		local title, _, _, _, isHeader = GetQuestLogTitle(index)
-		if isHeader and wasCollapsed[title] then
-			CollapseQuestHeader(index)
-			wasCollapsed[title] = nil
-		end
-	end
-end
 
