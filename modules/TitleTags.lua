@@ -24,8 +24,8 @@ function mod:OnDisable()
 end
 
 local function TagTitle(title, level, questTag, suggestedGroup, isHeader, isCollapsed, isComplete, isDaily, ...)
-	if not isHeader then
-		title = string.format("[%d%s%s] %s", level, questTag and tags[questTag] or "", isDaily and L['DailyTag'] or "", title)		
+	if title and not isHeader then
+		title = string.format("[%d%s%s] %s", level, questTag and tags[questTag] or "", isDaily and L['DailyTag'] or "", title)
 	end
 	return title, level, questTag, suggestedGroup, isHeader, isCollapsed, isComplete, isDaily, ...
 end
