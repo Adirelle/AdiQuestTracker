@@ -34,18 +34,18 @@ function mod:OnEnable()
 		_G[control]:Disable()
 	end
 	self:RegisterEvent('PLAYER_LOGOUT', 'Disable')
-	
+
 	self.currentZone = nil
 	self:RegisterEvent("PLAYER_ENTERING_WORLD", "CheckZone")
 	self:RegisterEvent("ZONE_CHANGED", "CheckZone")
 	self:RegisterEvent("ZONE_CHANGED_INDOORS", "CheckZone")
 	self:RegisterEvent("ZONE_CHANGED_NEW_AREA", "CheckZone")
-	self:RegisterEvent('QUEST_LOG_UPDATE')
+	self:RegisterEvent('QUEST_LOG_UPDATE', 'Update')
 	self:RegisterEvent('PARTY_MEMBERS_CHANGED', 'Update')
 	self:SecureHook('AddQuestWatch', 'DoNotManage')
 	self:SecureHook('RemoveQuestWatch', 'DoNotManage')
 	if IsLoggedIn() then
-		self:CheckZone("OnEnable")
+		self:Update("OnEnable")
 	end
 end
 
@@ -57,19 +57,6 @@ function mod:OnDisable()
 		_G[uvar] = setting
 		_G[control]:Enable()
 	end
-end
-
-function mod:QUEST_LOG_UPDATE(event)
-	self:UnregisterEvent('QUEST_LOG_UPDATE')
-	self:RegisterEvent('UNIT_QUEST_LOG_CHANGED')
-	self:Debug('QUEST_LOG_UPDATE', 'event=', event, 'unit=', unit)
-	return self:UNIT_QUEST_LOG_CHANGED(event, 'player')
-end
-
-function mod:UNIT_QUEST_LOG_CHANGED(event, unit)
-	if unit ~= "player" then return end
-	self:Debug('UNIT_QUEST_LOG_CHANGED', 'event=', event, 'unit=', unit)
-	return self:Update(event)
 end
 
 function mod:CheckZone(event)
@@ -98,7 +85,7 @@ local DoUpdate
 do
 	local toForget = {}
 	local watchState = {}
-	
+
 	function DoUpdate(self, event)
 		local managed = self.db.char.managed
 
@@ -108,7 +95,7 @@ do
 				toForget[questId] = true
 			end
 		end
-	
+
 		local _, instanceType = IsInInstance()
 		local inDungeon = (instanceType == 'party')
 		local inRaid = GetRealNumRaidMembers() > 0
@@ -116,12 +103,13 @@ do
 		for i = 1, GetRealNumPartyMembers() do
 			groupStrength = groupStrength + UnitLevel('party'..i)
 		end
-		self:Debug('Update data', 'inDungeon=', inDungeon, 'inRaid=', inRaid, 'groupStrength=', groupStrength)
-		
+		--self:Debug('Update data', 'inDungeon=', inDungeon, 'inRaid=', inRaid, 'groupStrength=', groupStrength)
+
 		-- Scan all quests to create a map of the ones we want to show
 		local numToWatch, numComplete = 0, 0
-		for index = 1, GetNumQuestLogEntries() do		
+		for index = 1, 50 do
 			local	title, level, tag, suggestedGroup, isHeader, _, isComplete, _, questId = GetQuestLogTitle(index)
+			if not title then break end
 			if not isHeader and questId then
 				toForget[questId] = nil -- do not forget managed flag of this quest
 				if managed[questId] then
@@ -141,34 +129,43 @@ do
 					else
 						watchState[index] = 'hide'
 					end
-					self:Debug('Managed quest: |cff00ffff', title, '|rid=', questId, 'mapId=', mapId, 'isDungeon=', isDungeonQuest, 'isRaidQuest=', isRaidQuest, 'recommendStrength=', recommendedGroupStrength, 'complete=', isComplete, 'state=|cffffff00', watchState[index], '|r')
-				else
-					self:Debug('Ignoring non-managed quest', title)
+					--self:Debug('Managed quest: |cff00ffff', title, '|rid=', questId, 'mapId=', mapId, 'isDungeon=', isDungeonQuest, 'isRaidQuest=', isRaidQuest, 'recommendStrength=', recommendedGroupStrength, 'complete=', isComplete, 'state=|cffffff00', watchState[index], '|r')
 				end
 			end
 		end
-	
-		-- Update state
-		self:Debug('numToWatch=', numToWatch, 'numComplete=', numComplete)
-		local showComplete = (numComplete == numToWatch)
+
+		-- State we want to show
+		local showState = (numToWatch > 0 and numComplete == numToWatch) and "complete" or "show"
+		self:Debug('Showing quests in state:', showState, 'numToWatch=', numToWatch, 'numComplete=', numComplete)
+
+		local dirty = false
+
+		-- Scan the watched quest to remove those we want to hide
+		for i = GetNumQuestWatches(), 1, -1 do
+			local index = GetQuestIndexForWatch(i)
+			if index and watchState[index] ~= showState then
+				self:Debug("Hiding quest: |cff00ffff", (GetQuestLogTitle(index)), '|r state=', watchState[index])
+				RemoveQuestWatch(index)
+				dirty = true
+			end
+		end
+
+		-- Start watching quests we want to show
 		for index, state in pairs(watchState) do
-			if state == 'show' or (showComplete and state == 'complete') then
+			if state == showState then
 				if not IsQuestWatched(index) then
-					self:Debug('Showing quest', index, 'state=', state)
+					self:Debug('Showing quest: |cff00ffff', (GetQuestLogTitle(index)), '|r state=', state)
 					AddQuestWatch(index)
-				else
-					self:Debug('Quest already shown:', index, 'state=', state)
-				end
-			else
-				if IsQuestWatched(index) then
-					self:Debug('Hiding quest', index, 'state=', state)
-					RemoveQuestWatch(index)
-				else
-					self:Debug('Quest already hidden:', index, 'state=', state)
+					dirty = true
 				end
 			end
 		end
 		wipe(watchState)
+
+		-- Force the WatchFrame to update
+		if dirty then
+			WatchFrame_Update()
+		end
 
 		-- Forgeting quest that are not in the log anymore
 		if next(toForget) then
@@ -178,7 +175,7 @@ do
 			end
 			wipe(toForget)
 		end
-	
+
 	end
 end
 
@@ -187,9 +184,7 @@ function mod:Update(event, ...)
 	self:Debug("Update", "event=", event)
 
 	updating = true
-	self.core:ExpandQuestLog()	
 	local ok, msg = pcall(DoUpdate, self, event, ...)
-	self.core:RestoreQuestLog()
 	updating = false
 
 	if not ok then
