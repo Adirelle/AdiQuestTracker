@@ -13,7 +13,11 @@ mod.title = L["Automatically update watched quests"]
 local DEFAULTS = {
 	char = {
 		managed = { ['*'] = true },
-	}
+	},
+	profile = {
+		limit = false,
+		maxNumber = 8,
+	},
 }
 
 function mod:OnInitialize()
@@ -59,6 +63,71 @@ function mod:OnDisable()
 	end
 end
 
+function mod:GetOptionsTable()
+	local tmp = {}
+	return {
+		name = L['Watch Updater'],
+		type = 'group',
+		args = {
+			limit = {
+				name = L['Limit watched quests'],
+				desc = L['Limit the number of watched quests.'],
+				type = 'toggle',
+				get = function() return self.db.profile.limit end,
+				set = function(_, value)
+					self.db.profile.limit = value
+					self:Update('OnConfigChanged')
+				end,
+				order = 10,
+			},
+			maxNumber = {
+				name = L['Maximum number of watched quests'],
+				desc = L['The maximum number of quests to watch at a time.'],
+				type = 'range',
+				min = 1,
+				max = 25,
+				step = 1,
+				get = function() return self.db.profile.maxNumber end,
+				set = function(_, value)
+					self.db.profile.maxNumber = value
+					self:Update('OnConfigChanged')
+				end,
+				disabled = function() return not self.db.profile.limit end,
+				order = 20,
+			},
+			reset = {
+				name = L['Reset free quests'],
+				desc = function()
+					wipe(tmp)
+					tinsert(tmp, L['Reset the list of quests that are not managed by this module:'])
+					for index = 1, 50 do
+						local	title, level, tag, suggestedGroup, isHeader, _, isComplete, _, questId = GetQuestLogTitle(index)
+						if not title then break end
+						if not isHeader and questId and not self.db.char.managed[questId] then
+							tinsert(tmp, title)
+						end
+					end
+					return table.concat(tmp, "\n")
+				end,
+				type = 'execute',
+				func = function()
+					wipe(self.db.char.managed)
+					self:Update("OnResetManaged")
+				end,
+				disabled = function()
+					for questId, managed in pairs(self.db.char.managed) do
+						if not managed then
+							return false
+						end
+					end
+					return true
+				end,
+				order = 30,
+			},
+		},
+	}
+end
+
 function mod:CheckZone(event)
 	local newZone = GetCurrentMapAreaID() - 1
 	self:Debug("CheckZone, event=", event, "old=", self.currentZone, "new=", newZone)
@@ -85,6 +154,12 @@ local DoUpdate
 do
 	local toForget = {}
 	local watchState = {}
+	local levels = {}
+	local indexes = {}
+	
+	local function SortByLevel(a, b)
+		return (levels[a or ""] or 0) < (levels[b or ""] or 0)
+	end
 
 	function DoUpdate(self, event)
 		local managed = self.db.char.managed
@@ -106,11 +181,12 @@ do
 		--self:Debug('Update data', 'inDungeon=', inDungeon, 'inRaid=', inRaid, 'groupStrength=', groupStrength)
 
 		-- Scan all quests to create a map of the ones we want to show
-		local numToWatch, numComplete = 0, 0
+		local numToWatch, numComplete, numForced = 0, 0, 0
 		for index = 1, 50 do
 			local	title, level, tag, suggestedGroup, isHeader, _, isComplete, _, questId = GetQuestLogTitle(index)
 			if not title then break end
 			if not isHeader and questId then
+				levels[index] = level
 				toForget[questId] = nil -- do not forget managed flag of this quest
 				if managed[questId] then
 					local mapId = GetQuestWorldMapAreaID(questId)
@@ -130,20 +206,74 @@ do
 						watchState[index] = 'hide'
 					end
 					--self:Debug('Managed quest: |cff00ffff', title, '|rid=', questId, 'mapId=', mapId, 'isDungeon=', isDungeonQuest, 'isRaidQuest=', isRaidQuest, 'recommendStrength=', recommendedGroupStrength, 'complete=', isComplete, 'state=|cffffff00', watchState[index], '|r')
+				else
+					if IsQuestWatched(index) then
+						numForced = numForced + 1
+						watchState[index] = "force-show"
+					else
+						watchState[index] = "force-hide"
+					end
 				end
 			end
 		end
 
 		-- State we want to show
 		local showState = (numToWatch > 0 and numComplete == numToWatch) and "complete" or "show"
-		self:Debug('Showing quests in state:', showState, 'numToWatch=', numToWatch, 'numComplete=', numComplete)
+		local maxNumber = self.db.profile.limit and math.max(self.db.profile.maxNumber, numForced) or (numToWatch + numForced)
+		local numManaged = math.max(0, maxNumber - numForced)
+		self:Debug('Showing quests in state:', showState, 'numToWatch=', numToWatch, 'numComplete=', numComplete, 'numForced=', numForced, 'maxNumber=', maxNumber, 'numManaged=', numManaged)
+		
+		-- Build a list of the indexes of the quests we want to show
+		for index, state in pairs(watchState) do
+			if state == "force-show" then
+				tinsert(indexes, index)
+			elseif state == showState and numManaged > 0 then
+				tinsert(indexes, index)
+				numManaged = numManaged - 1
+			end
+		end
+		table.sort(indexes, SortByLevel)
+		
+		local dirty = false
+		
+		-- Remove all quests we do not want
+		for i = GetNumQuestWatches(), 1, -1 do
+			local index = GetQuestIndexForWatch(i)
+			if index ~= indexes[i] then
+				self:Debug("Hiding quest:|cff00ffff", (GetQuestLogTitle(index)), '|r')
+				RemoveQuestWatch(GetQuestIndexForWatch(i))
+				dirty = true
+			end
+		end
+		
+		-- Add quests we want
+		for i = GetNumQuestWatches()+1, #indexes do
+			local index = indexes[i]
+			if not IsQuestWatched(index) then
+				self:Debug('Showing quest:|cff00ffff', (GetQuestLogTitle(index)), '|r')
+				AddQuestWatch(index)
+				dirty = true
+			end
+		end
 
+		-- Cleanup
+		wipe(indexes)
+		wipe(levels)
+		
+		-- Ensure the WatchFrame is up-to-date
+		if dirty then
+			self:Debug('Forcing WatchFrame update')
+			WatchFrame_Update()
+		end
+
+		--[[
 		local dirty = false
 
 		-- Scan the watched quest to remove those we want to hide
 		for i = GetNumQuestWatches(), 1, -1 do
 			local index = GetQuestIndexForWatch(i)
-			if index and watchState[index] ~= showState then
+			local state = index and watchState[index]
+			if state ~= "unmanaged" and state ~= showState then
 				self:Debug("Hiding quest: |cff00ffff", (GetQuestLogTitle(index)), '|r state=', watchState[index])
 				RemoveQuestWatch(index)
 				dirty = true
@@ -166,6 +296,7 @@ do
 		if dirty then
 			WatchFrame_Update()
 		end
+		--]]
 
 		-- Forgeting quest that are not in the log anymore
 		if next(toForget) then
