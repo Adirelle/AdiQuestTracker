@@ -17,8 +17,9 @@ local backdrop
 function mod:OnEnable()
 	if not backdrop then
 		backdrop = CreateFrame("Frame", nil, WatchFrameLines)
-		backdrop:SetPoint("TOPLEFT", WatchFrameLines, "TOPLEFT", -24-MARGIN, MARGIN)
-		backdrop:SetPoint("TOPRIGHT", WatchFrameLines, "TOPRIGHT", MARGIN, MARGIN)
+		backdrop:SetPoint("LEFT", WatchFrame, "LEFT", -24-MARGIN, 0)
+		backdrop:SetPoint("RIGHT", WatchFrame, "RIGHT", MARGIN, 0)
+		backdrop:SetPoint("TOP", WatchFrameLines, "TOP", 0, MARGIN)
 		backdrop:SetBackdrop({bgFile = [[Interface\Tooltips\UI-Tooltip-Background]], tile = true, tileSize = 16})
 		backdrop:SetBackdropColor(0, 0, 0, 0.5)
 		backdrop:SetBackdropBorderColor(0, 0, 0, 0)
