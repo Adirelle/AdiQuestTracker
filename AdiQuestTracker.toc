@@ -12,6 +12,7 @@ Localization.lua
 AdiQuestTracker.lua
 
 modules\AutoHide.lua
-modules\WatchUpdater.lua
 modules\TitleTags.lua
+modules\WatchUpdater.lua
+modules\WatchFrameBackground.lua
 
