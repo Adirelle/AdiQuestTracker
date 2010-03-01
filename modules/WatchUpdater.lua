@@ -53,6 +53,8 @@ function mod:OnEnable()
 	end
 end
 
+local listenPRE = false
+
 function mod:OnDisable()
 	for _, data in pairs(DISABLE_VARS) do
 		local cvar, uvar, control = unpack(data)
@@ -61,6 +63,7 @@ function mod:OnDisable()
 		_G[uvar] = setting
 		_G[control]:Enable()
 	end
+	listenPRE = false
 end
 
 function mod:GetOptionsTable()
@@ -145,6 +148,7 @@ function mod:DoNotManage(questLogIndex)
 	self:Debug('DoNotManage', 'index=', questLogIndex, 'id=', questId)
 	if questId then
 		self.db.char.managed[questId] = false
+		self:Update('OnManageUpdate')
 	end
 end
 
@@ -156,7 +160,7 @@ do
 	local watchState = {}
 	local levels = {}
 	local indexes = {}
-	
+
 	local function SortByLevel(a, b)
 		return (levels[a or ""] or 0) < (levels[b or ""] or 0)
 	end
@@ -222,7 +226,7 @@ do
 		local maxNumber = self.db.profile.limit and math.max(self.db.profile.maxNumber, numForced) or (numToWatch + numForced)
 		local numManaged = math.max(0, maxNumber - numForced)
 		self:Debug('Showing quests in state:', showState, 'numToWatch=', numToWatch, 'numComplete=', numComplete, 'numForced=', numForced, 'maxNumber=', maxNumber, 'numManaged=', numManaged)
-		
+
 		-- Build a list of the indexes of the quests we want to show
 		for index, state in pairs(watchState) do
 			if state == "force-show" then
@@ -233,9 +237,9 @@ do
 			end
 		end
 		table.sort(indexes, SortByLevel)
-		
+
 		local dirty = false
-		
+
 		-- Remove all quests we do not want
 		for i = GetNumQuestWatches(), 1, -1 do
 			local index = GetQuestIndexForWatch(i)
@@ -245,7 +249,7 @@ do
 				dirty = true
 			end
 		end
-		
+
 		-- Add quests we want
 		for i = GetNumQuestWatches()+1, #indexes do
 			local index = indexes[i]
@@ -259,7 +263,7 @@ do
 		-- Cleanup
 		wipe(indexes)
 		wipe(levels)
-		
+
 		-- Ensure the WatchFrame is up-to-date
 		if dirty then
 			self:Debug('Forcing WatchFrame update')
@@ -308,10 +312,21 @@ do
 		end
 
 	end
+
 end
 
 function mod:Update(event, ...)
 	if updating then return self:Debug("Ignoring", event, "during updating") end
+	if InCombatLockdown() then
+		if not listenPRE then
+			self:RegisterEvent('PLAYER_REGEN_ENABLED', 'Update')
+			listenPRE = true
+		end
+		return
+	elseif listenPRE then
+		self:UnregisterEvent('PLAYER_REGEN_ENABLED')
+		listenPRE = nil
+	end
 	self:Debug("Update", "event=", event)
 
 	updating = true
