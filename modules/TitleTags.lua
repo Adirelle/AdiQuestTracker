@@ -28,20 +28,19 @@ function mod:OnDisable()
 	self:UnhookAll()
 end
 
-local function FormatTitle(title, level, tag, isDaily)
+local function FormatTitle(title, level, tag, isDaily, suggestedGroup)
 	if title and type(level) == "number" and level > 0 then
 		local color = GetQuestDifficultyColor(level)
-		title = string.format("|cff%02x%02x%02x[%s%s%s]|r %s", 255*color.r, 255*color.g, 255*color.b, (level or ""), tag and tags[tag] or "", isDaily and L['DailyTag'] or "", title)
+		title = string.format("|cff%02x%02x%02x[%s%s%s%s]|r %s", 255*color.r, 255*color.g, 255*color.b, (level or ""), tag and tags[tag] or "", isDaily and L['DailyTag'] or "", (tonumber(suggestedGroup) or 0) > 1 and suggestedGroup or "", title)
 	end
-	mod:Debug(title, level, tag, isDaily)
 	return title
 end
 
-local function FormatQuestLogTitle(title, level, questTag, suggestedGroup, isHeader, isCollapsed, isComplete, isDaily, ...)
+local function FormatQuestLogTitle(title, level, questTag, suggestedGroup, isHeader, isCollapsed, isComplete, isDaily, questId, ...)
 	if title and not isHeader then
-		title = FormatTitle(title, level, questTag, isDaily)
+		title = FormatTitle(title, level, questTag, isDaily, suggestedGroup)
 	end
-	return title, level, questTag, suggestedGroup, isHeader, isCollapsed, isComplete, isDaily, ...
+	return title, level, questTag, suggestedGroup, isHeader, isCollapsed, isComplete, isDaily, questId, ...
 end
 
 function mod:GetQuestLogTitle(...)
