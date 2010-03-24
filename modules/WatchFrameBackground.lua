@@ -27,7 +27,6 @@ function mod:OnEnable()
 	self:SecureHook('WatchFrame_Update', 'Update')
 	self:SecureHookScript(WatchFrameLines, 'OnShow', 'Update')
 	self:Update()
-	backdrop:Show()
 end
 
 function mod:OnDisable()
@@ -35,9 +34,15 @@ function mod:OnDisable()
 end
 
 function mod:Update()
-	if WatchFrameLines:IsShown() then
-		self:Debug('Updating size to', WatchFrame.nextOffset)
-		backdrop:SetHeight(-WatchFrame.nextOffset)
+	if not WatchFrameLines:IsVisible() then return end
+	local size = -WatchFrame.nextOffset
+	if size ~= 0 then
+		self:Debug('Updating size to', size)
+		backdrop:SetHeight(size)
+		backdrop:Show()
+	else
+		self:Debug('Hiding background')
+		backdrop:Hide()
 	end
 end
 
