@@ -13,6 +13,5 @@ AdiQuestTracker.lua
 
 modules\AutoHide.lua
 modules\TitleTags.lua
-modules\WatchUpdater.lua
 modules\WatchFrameBackground.lua
 
