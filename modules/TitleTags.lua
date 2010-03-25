@@ -49,27 +49,34 @@ end
 
 local gossipTitleCache = {}
 
-local function FormatGossipQuestTitles(title, level, trivial, ...)
-	if not title then return end
-	local newTitle = title
-	if title then
-		newTitle = FormatTitle(title, level)
-		gossipTitleCache[title] = newTitle
-	end
-	mod:Debug('FormatGossipQuestTitles', title, newTitle, level, trivial, more, ...)
-	return newTitle, level, trivial, FormatGossipQuestTitles(...)
-end
-
 function mod:ClearTitleCache()
 	wipe(gossipTitleCache)
 end
 
+local function FormatGossipQuestTitle(title, level, daily)
+	local newTitle = FormatTitle(title, level, nil, daily)
+	gossipTitleCache[title] = newTitle
+	return newTitle
+end
+
+local function FormatAvailableGossipQuestTitles(title, level, trivial, daily, repeatable, ...)
+	if title then
+		return FormatGossipQuestTitle(title, level, daily), level, trivial, daily, repeatable, FormatAvailableGossipQuestTitles(...)
+	end
+end
+
 function mod:GetGossipAvailableQuests(...)
-	return FormatGossipQuestTitles(self.hooks.GetGossipAvailableQuests(...))
+	return FormatAvailableGossipQuestTitles(self.hooks.GetGossipAvailableQuests(...))
+end
+
+local function FormatActiveGossipQuestTitles(title, level, trivial, active, ...)
+	if title then
+		return FormatGossipQuestTitle(title, level), level, trivial, active, FormatActiveGossipQuestTitles(...)
+	end
 end
 
 function mod:GetGossipActiveQuests(...)
-	return FormatGossipQuestTitles(self.hooks.GetGossipActiveQuests(...))
+	return FormatActiveGossipQuestTitles(self.hooks.GetGossipActiveQuests(...))
 end
 
 function mod:GetTitleText(...)
