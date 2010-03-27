@@ -8,10 +8,13 @@
 ## OptionalDeps: LibStub, CallbackHandler-1.0, Ace3, tekDebug
 ## X-Licence: All rights reserved
 
+libs\Astrolabe\Load.xml
+
 Localization.lua
 AdiQuestTracker.lua
 
 modules\AutoHide.lua
 modules\TitleTags.lua
 modules\WatchFrameBackground.lua
+modules\MinimapPOI.lua
 
