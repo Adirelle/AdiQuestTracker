@@ -19,9 +19,8 @@ function mod:OnEnable()
 	self:RegisterEvent("ZONE_CHANGED_NEW_AREA", "RequiresUpdate")
 	self:RegisterEvent("QUEST_POI_UPDATE", "RequiresUpdate")
 	self:SecureHook("WatchFrame_Update")
-	self:SecureHook("SetMapToCurrentZone")
-	self:SetMapToCurrentZone()
 	self:ScheduleRepeatingTimer("RepeatingTask", 0.1)
+	self:RequiresUpdate("OnEnable")
 end
 
 function mod:OnDisable()
@@ -37,13 +36,13 @@ function mod:RepeatingTask()
 	
 	for poi in self:IterateActivePOIs() do
 		local onEdge = Astrolabe:IsIconOnEdge(poi)
-		if onEdge or poi.complete then
+		if poi.button and (onEdge or poi.complete) then
 			local button = poi.button
 			local isShown = button:IsShown()
-			local show, scale = true, 1
+			local show, alpha = true, 0.8
 			local distance = Astrolabe:GetDistanceToIcon(poi)
 			if onEdge then
-				scale = 0.3 + 0.4 * math.min(math.max(1 - (distance - 200) / 200, 0), 1)
+				alpha = 0.4 + 0.4 * math.min(math.max(1 - (distance - 200) / 200, 0), 1)
 			elseif poi.complete then
 				show = (distance > 100) or (isShown and distance > 80)
 			end
@@ -51,8 +50,8 @@ function mod:RepeatingTask()
 				if not isShown then
 					button:Show()
 				end
-				if button:GetScale() ~= scale then
-					button:SetScale(scale)
+				if button:GetAlpha() ~= alpha then
+					button:SetAlpha(alpha)
 				end
 			elseif isShown then
 				button:Hide()
@@ -68,14 +67,6 @@ end
 
 function mod:WatchFrame_Update()
 	return self:RequiresUpdate("WatchFrame_Update")
-end
-
-local continent, zone
-function mod:SetMapToCurrentZone()
-	continent = GetCurrentMapContinent()
-	zone = GetCurrentMapZone()
-	self:Debug('SetMapToCurrentZone', continent, zone)
-	return self:RequiresUpdate("SetMapToCurrentZone")
 end
 
 local titleByQuestId = {}
@@ -102,6 +93,7 @@ function mod:UpdatePOIs()
 		end
 	end
 	
+	local continent, zone = GetCurrentMapContinent(), GetCurrentMapZone()
 	QuestPOIUpdateIcons()
 	--QuestMapUpdateAllQuests()
 
@@ -130,11 +122,12 @@ function mod:UpdatePOIs()
 						if poi.title ~= title or poi.questId ~= questId or poi.complete ~= complete or poi.index ~= buttonIndex then
 							self:Debug(poi:GetName(), ' data needs an update, complete=', complete, 'index=', buttonIndex)
 							poi.title, poi.questId, poi.complete, poi.index = title, questId, complete, buttonIndex
-							poi.button = QuestPOI_DisplayButton("Minimap", buttonType, buttonIndex, questId)
-							poi.button:SetParent(poi)
-							poi.button:SetPoint("CENTER")
-							poi.button:EnableMouse(false)
-							poi.button:SetScale(0.7)
+							local button = QuestPOI_DisplayButton("Minimap", buttonType, buttonIndex, questId)
+							poi.button = button
+							button:SetParent(poi)
+							button:SetPoint("CENTER")
+							button:SetScale(0.7)
+							button:EnableMouse(false)
 						end
 					end
 				else
@@ -143,72 +136,6 @@ function mod:UpdatePOIs()
 			end
 		end
 	end
-
-	--[[
-	local playerMoney = GetMoney()
-	local hideComplete = bit.band(WATCHFRAME_FILTER_TYPE, WATCHFRAME_FILTER_COMPLETED_QUESTS) ~= WATCHFRAME_FILTER_COMPLETED_QUESTS
-	local hideRemote = bit.band(WATCHFRAME_FILTER_TYPE, WATCHFRAME_FILTER_REMOTE_ZONES) ~= WATCHFRAME_FILTER_REMOTE_ZONES
-
-	local completedIndex, objectiveIndex = 1, 1
-	for watchIndex = 1, GetNumQuestWatches() do
-		local logIndex = GetQuestIndexForWatch(watchIndex)
-		if logIndex then
-			local title, _, _, _, _, _, complete, _, questId = GetQuestLogTitle(logIndex)
-			if complete == -1 then
-				complete = false
-			elseif complete == 1 then
-				complete = true
-			elseif GetNumQuestLeaderBoards(logIndex) == 0 and playerMoney > (GetQuestLogRequiredMoney(logIndex) or 0) then
-				complete = true
-			else
-				complete = false
-			end
-			if (complete and hideComplete) or (not LOCAL_MAP_QUESTS[questId or ""] and hideRemote) then
-				self:Debug('Ignoring completed/remote quest', title)
-			elseif title and questId then
-				local _, x, y = QuestPOIGetIconInfo(questId)
-				if x and y then
-					local poi = poiByQuestId[questId]
-					poiByQuestId[questId] = nil
-					if not poi then
-						poi = self:AcquirePOI()
-					end
-
-					-- Increase indexes even if we can't place the icon
-					local poiIndex
-					if complete then
-						poiIndex, completedIndex = completedIndex, completedIndex + 1
-					else
-						poiIndex, objectiveIndex = objectiveIndex, objectiveIndex + 1
-					end
-
-					if Astrolabe:PlaceIconOnMinimap(poi, continent, zone, x, y) == -1 then
-						self:Debug("Can't add icon to minimap", title, 'x,y:', math.ceil(x*100)/100, math.ceil(y*100)/100)
-						self:ReleasePOI(poi)
-					else
-						self:Debug('Placed', poi:GetName() ,'on minimap, quest:', title, 'x,y:', math.ceil(x*100)/100, math.ceil(y*100)/100)
-						if poi.title ~= title or poi.questId ~= questId or poi.complete ~= complete or poi.index ~= poiIndex then
-							self:Debug(poi:GetName(), ' data needs an update, complete=', complete, 'index=', poiIndex)
-							poi.title, poi.questId, poi.complete, poi.index = title, questId, complete, poiIndex
-							poi.button = QuestPOI_DisplayButton("Minimap", complete and QUEST_POI_COMPLETE_IN or QUEST_POI_NUMERIC, poiIndex, questId)
-							poi.button:SetParent(poi)
-							poi.button:SetPoint("CENTER")
-							poi.button:EnableMouse(false)
-							poi.button:SetScale(0.7)
-							self:UpdatePOI(poi)
-						end
-					end
-				else
-					self:Debug('No coordinate for quest', title)
-				end
-			else
-				self:Debug('No title nor quest id for quest #', logIndex)
-			end
-		else
-			self:Debug('No QuestLog index for watched quest #', watchIndex)
-		end
-	end
-	--]]
 
 	for k, poi in pairs(poiByQuestId) do
 		self:Debug('Releasing unused POI', poi:GetName())
@@ -239,6 +166,7 @@ do
 		self:Debug('Spawning POI', poiCount)
 		local poi = CreateFrame("Frame", modName..poiCount, Minimap)
 		poiCount = poiCount + 1
+		poi:SetAlpha(0.8)
 		poi:SetWidth(10)
 		poi:SetHeight(10)
 		poi:SetScript("OnEnter", POI_OnEnter)
