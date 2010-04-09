@@ -39,10 +39,10 @@ function mod:RepeatingTask()
 		if poi.button and (onEdge or poi.complete) then
 			local button = poi.button
 			local isShown = button:IsShown()
-			local show, alpha = true, 0.8
+			local show, alpha = true, 1.0
 			local distance = Astrolabe:GetDistanceToIcon(poi)
 			if onEdge then
-				alpha = 0.4 + 0.4 * math.min(math.max(1 - (distance - 200) / 200, 0), 1)
+				alpha = 0.4 + 0.6 * math.min(math.max(1 - (distance - 200) / 200, 0), 1)
 			elseif poi.complete then
 				show = (distance > 100) or (isShown and distance > 80)
 			end
@@ -89,7 +89,7 @@ function mod:UpdatePOIs()
 			poiByQuestId[poi.button.questId] = poi
 		else
 			self:Debug('POI has no button ?!?', poi:GetName())
-			poiByQuestId[poi:GetName()] = poi
+			self:ReleasePOI(poi)
 		end
 	end
 	
@@ -125,6 +125,7 @@ function mod:UpdatePOIs()
 							local button = QuestPOI_DisplayButton("Minimap", buttonType, buttonIndex, questId)
 							poi.button = button
 							button:SetParent(poi)
+							button:ClearAllPoints()
 							button:SetPoint("CENTER")
 							button:SetScale(0.7)
 							button:EnableMouse(false)
@@ -166,7 +167,6 @@ do
 		self:Debug('Spawning POI', poiCount)
 		local poi = CreateFrame("Frame", modName..poiCount, Minimap)
 		poiCount = poiCount + 1
-		poi:SetAlpha(0.8)
 		poi:SetWidth(10)
 		poi:SetHeight(10)
 		poi:SetScript("OnEnter", POI_OnEnter)
@@ -184,7 +184,12 @@ do
 	end
 
 	function mod:ReleasePOI(poi)
-		poi.button = nil
+		if poi.button then
+			poi.button:ClearAllPoints()
+			poi.button:SetParent(nil)
+			poi.button:Hide()
+			poi.button = nil
+		end
 		Astrolabe:RemoveIconFromMinimap(poi)
 		poiHeap[poi], activePOIs[poi] = true, nil
 		self:Debug('Released POI', poi:GetName())
