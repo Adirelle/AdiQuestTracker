@@ -85,20 +85,16 @@ function mod:UpdatePOIs()
 
 	wipe(poiByQuestId)
 	for poi in self:IterateActivePOIs() do
-		if poi.button then
-			poiByQuestId[poi.button.questId] = poi
-		else
-			self:Debug('POI has no button ?!?', poi:GetName())
-			self:ReleasePOI(poi)
-		end
+		poiByQuestId[poi.questId] = poi
 	end
 	
 	local continent, zone = GetCurrentMapContinent(), GetCurrentMapZone()
 	QuestPOIUpdateIcons()
-	--QuestMapUpdateAllQuests()
+	QuestMapUpdateAllQuests()
 
 	local maxIndex = GetNumQuestWatches()
 	for buttonType = QUEST_POI_NUMERIC, QUEST_POI_COMPLETE_IN do
+		QuestPOI_HideButtons("Minimap", buttonType, 1)
 		local complete = (buttonType == QUEST_POI_COMPLETE_IN)
 		for buttonIndex = 1, maxIndex do
 			local wfButton = _G["poiWatchFrameLines"..buttonType.."_"..buttonIndex]
@@ -110,14 +106,11 @@ function mod:UpdatePOIs()
 				self:Debug('button:', wfButton and wfButton:GetName(), 'questId:', questId, 'title:', title, 'x,y:', x, y)
 				if x and y then
 					local poi = poiByQuestId[questId]
-					poiByQuestId[questId] = nil
 					if not poi then
 						poi = self:AcquirePOI()
 					end
-					if Astrolabe:PlaceIconOnMinimap(poi, continent, zone, x, y) == -1 then
-						self:Debug("Can't add icon to minimap", title, 'x,y:', math.ceil(x*100)/100, math.ceil(y*100)/100)
-						self:ReleasePOI(poi)
-					else
+					if Astrolabe:PlaceIconOnMinimap(poi, continent, zone, x, y) ~= -1 then
+						poiByQuestId[questId] = nil
 						self:Debug('Placed', poi:GetName() ,'on minimap, quest:', title, 'x,y:', math.ceil(x*100)/100, math.ceil(y*100)/100)
 						if poi.title ~= title or poi.questId ~= questId or poi.complete ~= complete or poi.index ~= buttonIndex then
 							self:Debug(poi:GetName(), ' data needs an update, complete=', complete, 'index=', buttonIndex)
@@ -125,11 +118,13 @@ function mod:UpdatePOIs()
 							local button = QuestPOI_DisplayButton("Minimap", buttonType, buttonIndex, questId)
 							poi.button = button
 							button:SetParent(poi)
-							button:ClearAllPoints()
 							button:SetPoint("CENTER")
 							button:SetScale(0.7)
 							button:EnableMouse(false)
 						end
+						poi.button:Show()
+					else
+						self:Debug("Can't add icon to minimap", title, 'x,y:', math.ceil(x*100)/100, math.ceil(y*100)/100)
 					end
 				else
 					self:Debug('No coordinate for quest', title)
@@ -184,12 +179,7 @@ do
 	end
 
 	function mod:ReleasePOI(poi)
-		if poi.button then
-			poi.button:ClearAllPoints()
-			poi.button:SetParent(nil)
-			poi.button:Hide()
-			poi.button = nil
-		end
+		poi.button = nil
 		Astrolabe:RemoveIconFromMinimap(poi)
 		poiHeap[poi], activePOIs[poi] = true, nil
 		self:Debug('Released POI', poi:GetName())
