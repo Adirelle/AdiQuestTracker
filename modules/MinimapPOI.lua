@@ -179,6 +179,10 @@ do
 	end
 
 	function mod:ReleasePOI(poi)
+		poi.title = nil
+		poi.questId = nil
+		poi.complete = nil
+		poi.index = nil
 		poi.button = nil
 		Astrolabe:RemoveIconFromMinimap(poi)
 		poiHeap[poi], activePOIs[poi] = true, nil
