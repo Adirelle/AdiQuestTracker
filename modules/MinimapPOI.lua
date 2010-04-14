@@ -83,9 +83,8 @@ function mod:UpdatePOIs()
 		end
 	end
 
-	wipe(poiByQuestId)
 	for poi in self:IterateActivePOIs() do
-		poiByQuestId[poi.questId] = poi
+		poiByQuestId[poi.questId or tostring(poi)] = poi
 	end
 	
 	local continent, zone = GetCurrentMapContinent(), GetCurrentMapZone()
@@ -137,6 +136,7 @@ function mod:UpdatePOIs()
 		self:Debug('Releasing unused POI', poi:GetName())
 		self:ReleasePOI(poi)
 	end
+	wipe(poiByQuestId)
 end
 
 do
