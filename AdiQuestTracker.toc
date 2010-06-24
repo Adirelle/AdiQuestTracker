@@ -5,7 +5,7 @@
 ## Author: Adirelle
 ## Version: @project-version@ 
 ## SavedVariables: AdiQuestTrackerDB
-## OptionalDeps: LibStub, CallbackHandler-1.0, Ace3, tekDebug
+## OptionalDeps: LibStub, CallbackHandler-1.0, Ace3, tekDebug, SexyMap
 ## X-Licence: All rights reserved
 
 libs\Astrolabe\Load.xml

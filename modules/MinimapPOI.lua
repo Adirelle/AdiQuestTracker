@@ -20,6 +20,12 @@ function mod:OnEnable()
 	self:RegisterEvent("QUEST_POI_UPDATE", "RequiresUpdate")
 	self:SecureHook("WatchFrame_Update")
 	self:ScheduleRepeatingTimer("RepeatingTask", 0.1)
+	if _G.SexyMapHudMap and _G.HudMapCluster then
+		self:Debug('SexyHudMap support enabled')
+		self:SecureHookScript(HudMapCluster, 'OnShow', 'ReparentPOIs')
+		self:SecureHookScript(HudMapCluster, 'OnHide', 'ReparentPOIs')
+	end
+	
 	self:RequiresUpdate("OnEnable")
 end
 
@@ -140,6 +146,7 @@ function mod:UpdatePOIs()
 end
 
 do
+	local minimap = Minimap
 	local tooltip = GameTooltip
 	local poiCount = 1
 	local poiHeap = {}
@@ -174,17 +181,20 @@ do
 	function mod:AcquirePOI()
 		poi = next(poiHeap) or self:SpawnPOI()
 		poiHeap[poi], activePOIs[poi] = nil, true
+		poi:SetParent(minimap)
 		self:Debug('Acquired POI', poi:GetName())
 		return poi
 	end
 
 	function mod:ReleasePOI(poi)
+		Astrolabe:RemoveIconFromMinimap(poi)
 		poi.title = nil
 		poi.questId = nil
 		poi.complete = nil
 		poi.index = nil
 		poi.button = nil
-		Astrolabe:RemoveIconFromMinimap(poi)
+		poi:SetParent(nil)
+		poi:Hide()
 		poiHeap[poi], activePOIs[poi] = true, nil
 		self:Debug('Released POI', poi:GetName())
 	end
@@ -196,6 +206,19 @@ do
 			poiHeap[poi] = true
 		end
 		wipe(activePOIs)
+	end
+	
+	function mod:ReparentPOIs(newMinimap)
+		if newMinimap:IsVisible() then
+			minimap = newMinimap
+		else
+			minimap = Minimap
+		end
+		mod:Debug('ReparentPOIs', minimap:GetName() or tostring(minimap))
+		for poi in pairs(activePOIs) do
+			poi:SetParent(minimap)
+		end
+		self:RequiresUpdate('ReparentPOIs')
 	end
 	
 	function mod:IterateActivePOIs()
