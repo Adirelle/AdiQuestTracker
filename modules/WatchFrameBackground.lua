@@ -33,12 +33,33 @@ function mod:OnDisable()
 	backdrop:Hide()
 end
 
+local function GetBottomMax(...)
+	local bottom = nil
+	for i = 1, select('#', ...) do
+		for j, line in pairs(select(i, ...)) do
+			if line:IsShown() then
+				local lineBottom = line:GetBottom()
+				if lineBottom then
+					if bottom and lineBottom < bottom then
+						bottom = lineBottom
+					else
+						bottom = lineBottom
+					end
+				end
+			end
+		end
+	end
+	return bottom
+end
+
 function mod:Update()
 	if not WatchFrameLines:IsVisible() then return end
-	local size = -WatchFrame.nextOffset
-	if size ~= 0 then
+	local bottom = GetBottomMax(WATCHFRAME_TIMERLINES, WATCHFRAME_ACHIEVEMENTLINES, WATCHFRAME_QUESTLINES)
+	if bottom then
+		local size = WatchFrameLines:GetTop() - bottom
+		self:Debug(bottom, WatchFrameLines:GetTop(), size)
 		self:Debug('Updating size to', size)
-		backdrop:SetHeight(size)
+		backdrop:SetHeight(size + 12)
 		backdrop:Show()
 	else
 		self:Debug('Hiding background')
