@@ -91,11 +91,8 @@ function addon.GetOptionsTable()
 end
 
 -- Debug output
-if tekDebug then
-	local debugFrame = tekDebug:GetFrame(addonName)
-	function addon:Debug(...)
-		debugFrame:AddMessage('|cffff8800['..tostring(self)..']|r '..strjoin(" ", tostringall(...)):gsub("= ", "="))
-	end
+if AdiDebug then
+	AdiDebug:Embed(addon, addonName)
 	function addon:HasDebug() return true end
 else
 	function addon:Debug() end
