@@ -11,7 +11,7 @@ local L = core.L
 
 mod.title = L["Display quest POI on minimap"]
 
-local Astrolabe = DongleStub("Astrolabe-0.4")
+local Astrolabe = DongleStub("Astrolabe-1.0")
 
 function mod:OnEnable()
 	self:RegisterEvent("PLAYER_ENTERING_WORLD", "RequiresUpdate")
@@ -41,26 +41,15 @@ function mod:RepeatingTask()
 	end
 	
 	for poi in self:IterateActivePOIs() do
-		local onEdge = Astrolabe:IsIconOnEdge(poi)
-		if poi.button and (onEdge or poi.complete) then
-			local button = poi.button
-			local isShown = button:IsShown()
-			local show, alpha = true, 1.0
-			local distance = Astrolabe:GetDistanceToIcon(poi)
-			if onEdge then
-				alpha = 0.4 + 0.6 * math.min(math.max(1 - (distance - 200) / 200, 0), 1)
-			elseif poi.complete then
-				show = (distance > 100) or (isShown and distance > 80)
-			end
-			if show then
-				if not isShown then
+		if poi.button then
+			local button, onEdge = poi.button, Astrolabe:IsIconOnEdge(poi)
+			if button.onEdge ~= onEdge then
+				button.onEdge = onEdge
+				if onEdge then
+					button:Hide()
+				else
 					button:Show()
 				end
-				if button:GetAlpha() ~= alpha then
-					button:SetAlpha(alpha)
-				end
-			elseif isShown then
-				button:Hide()
 			end
 		end
 	end
@@ -93,7 +82,7 @@ function mod:UpdatePOIs()
 		poiByQuestId[poi.questId or tostring(poi)] = poi
 	end
 	
-	local continent, zone = GetCurrentMapContinent(), GetCurrentMapZone()
+	local mapID, mapFloor = Astrolabe:GetCurrentPlayerPosition()
 	QuestPOIUpdateIcons()
 	QuestMapUpdateAllQuests()
 
@@ -114,7 +103,7 @@ function mod:UpdatePOIs()
 					if not poi then
 						poi = self:AcquirePOI()
 					end
-					if Astrolabe:PlaceIconOnMinimap(poi, continent, zone, x, y) ~= -1 then
+					if Astrolabe:PlaceIconOnMinimap(poi, mapID, mapFloor, x, y) ~= -1 then
 						poiByQuestId[questId] = nil
 						self:Debug('Placed', poi:GetName() ,'on minimap, quest:', title, 'x,y:', math.ceil(x*100)/100, math.ceil(y*100)/100)
 						if poi.title ~= title or poi.questId ~= questId or poi.complete ~= complete or poi.index ~= buttonIndex then
