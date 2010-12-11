@@ -43,13 +43,12 @@ function mod:RepeatingTask()
 	for poi in self:IterateActivePOIs() do
 		if poi.button then
 			local button, onEdge = poi.button, Astrolabe:IsIconOnEdge(poi)
-			if button.onEdge ~= onEdge then
-				button.onEdge = onEdge
-				if onEdge then
+			if onEdge then
+				if button:IsShown() then
 					button:Hide()
-				else
-					button:Show()
 				end
+			elseif not button:IsShown() then
+				button:Show()
 			end
 		end
 	end
@@ -116,7 +115,11 @@ function mod:UpdatePOIs()
 							button:SetScale(0.7)
 							button:EnableMouse(false)
 						end
-						poi.button:Show()
+						if Astrolabe:IsIconOnEdge(poi) then
+							poi.button:Hide()
+						else
+							poi.button:Show()
+						end
 					else
 						self:Debug("Can't add icon to minimap", title, 'x,y:', math.ceil(x*100)/100, math.ceil(y*100)/100)
 					end
