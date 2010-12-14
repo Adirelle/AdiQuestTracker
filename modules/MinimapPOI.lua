@@ -47,6 +47,17 @@ function mod:RepeatingTask()
 				if button:IsShown() then
 					button:Hide()
 				end
+			elseif poi.complete then
+				local distance = Astrolabe:GetDistanceToIcon(poi)
+				if distance < 80 then
+					if button:IsShown()  then
+						button:Hide()
+					end
+				else
+					if not button:IsShown()  then
+						button:Show()
+					end
+				end
 			elseif not button:IsShown() then
 				button:Show()
 			end
